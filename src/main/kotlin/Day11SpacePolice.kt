@@ -7,7 +7,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 val LOG = LoggerFactory.getLogger("")
-class Robot(val computer: IntcodeComputer) {
+class Robot(val computer: IntCodeComputer) {
     var loc = Point(0, 0)
     var dir = 0
     var min = loc
@@ -68,7 +68,7 @@ class Robot(val computer: IntcodeComputer) {
 data class Point(val x: Int, val y:Int)
 operator fun Point.plus(other: Point) = Point(x + other.x, y + other.y)
 
-val computer = IntcodeComputer()
+val computer = IntCodeComputer()
 
 fun main() = runBlocking {
     LOG.info("Loading program")

@@ -1,18 +1,17 @@
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import org.slf4j.LoggerFactory
 import java.lang.RuntimeException
 import kotlin.math.pow
 
 
-class IntcodeComputer {
+class IntCodeComputer {
 
-    val LOG = LoggerFactory.getLogger("")
+    companion object {
+        private const val MEM_SIZE = 4096
+    }
 
-    private val MEMSIZE = 4096
-
-    private var memory = LongArray(MEMSIZE) { 0 }
+    private var memory = LongArray(MEM_SIZE) { 0 }
     private var ic = 0
     private var relativeBase = 0
 
@@ -87,9 +86,9 @@ class IntcodeComputer {
         return a
     }
 
-    fun value(a: IntArray, i: Int) = if (i < a.size) a[i] else 0
+    private fun value(a: IntArray, i: Int) = if (i < a.size) a[i] else 0
 
-    fun readParam(pos: Int, mode: IntArray) : Long {
+    private fun readParam(pos: Int, mode: IntArray) : Long {
         return when (val paramMode = mode[pos - 1]) {
             0 -> memory[memory[ic + pos].toInt()]
             1 -> memory[ic + pos]
@@ -98,7 +97,7 @@ class IntcodeComputer {
         }
     }
 
-    fun writeParam(pos: Int, value: Long, mode: IntArray) {
+    private fun writeParam(pos: Int, value: Long, mode: IntArray) {
         when (val paramMode = mode[pos - 1]) {
             0 -> memory[memory[ic + pos].toInt()] = value
             2 -> memory[relativeBase + memory[ic + pos].toInt()] = value
@@ -106,72 +105,71 @@ class IntcodeComputer {
         }
     }
 
-    fun add(mode: IntArray) : Int {
+    private fun add(mode: IntArray) : Int {
         val a = readParam(1, mode)
         val b = readParam(2, mode)
         writeParam(3, a + b, mode)
         return ic + 4
     }
 
-    fun multiply(mode: IntArray) : Int {
+    private fun multiply(mode: IntArray) : Int {
         val a = readParam(1, mode)
         val b = readParam(2, mode)
         writeParam(3, a * b, mode)
         return ic + 4
     }
 
-    suspend fun input(mode: IntArray) : Int {
+    private suspend fun input(mode: IntArray) : Int {
         val value = input.receive()
         writeParam(1, value, mode)
         return ic + 2
     }
 
-    suspend fun output(mode: IntArray) : Int {
+    private suspend fun output(mode: IntArray) : Int {
         val value = readParam(1, mode)
-        println("Output: $value")
         output.send(value)
         return ic + 2
     }
 
-    fun jumpIfTrue(mode: IntArray) : Int {
+    private fun jumpIfTrue(mode: IntArray) : Int {
         val a = readParam(1, mode)
         val b = readParam(2, mode)
         return if (a != 0L) b.toInt() else ic + 3
     }
 
-    fun jumpIfFalse(mode: IntArray) : Int {
+    private fun jumpIfFalse(mode: IntArray) : Int {
         val a = readParam(1, mode)
         val b = readParam(2, mode)
         return if (a == 0L) b.toInt() else ic + 3
     }
 
-    fun lessThan(mode: IntArray) : Int {
+    private fun lessThan(mode: IntArray) : Int {
         val a = readParam(1, mode)
         val b = readParam(2, mode)
         writeParam(3, if (a < b) 1 else 0, mode)
         return ic + 4
     }
 
-    fun eqals(mode: IntArray) : Int {
+    private fun eqals(mode: IntArray) : Int {
         val a = readParam(1, mode)
         val b = readParam(2, mode)
         writeParam(3, if (a == b) 1 else 0, mode)
         return ic + 4
     }
 
-    fun setRel(mode: IntArray) : Int {
+    private fun setRel(mode: IntArray) : Int {
         val a = readParam(1, mode).toInt()
         relativeBase += a
         return ic + 2
     }
 
-    fun halt() : Int {
+    private fun halt() : Int {
         running = false
         output.close()
         return ic + 1
     }
 
-    fun error(opcode: Int) : Int {
+    private fun error(opcode: Int) : Int {
         println("Error: Unknown opcode $opcode")
         running = false
         return ic + 1
