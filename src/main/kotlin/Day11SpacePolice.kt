@@ -8,13 +8,13 @@ import kotlin.math.min
 
 val LOG = LoggerFactory.getLogger("")
 class Robot(val computer: IntCodeComputer) {
-    var loc = Point(0, 0)
+    var loc = Point2(0, 0)
     var dir = 0
     var min = loc
     var max = loc
 
-    val dirs = arrayOf(Point(0, -1), Point(1, 0), Point(0, 1), Point(-1, 0))
-    val panel = mutableMapOf<Point, Int>()
+    val dirs = arrayOf(Point2(0, -1), Point2(1, 0), Point2(0, 1), Point2(-1, 0))
+    val panel = mutableMapOf<Point2, Int>()
     val colours = arrayOf("  ", "XX")
 
     init {
@@ -28,18 +28,18 @@ class Robot(val computer: IntCodeComputer) {
     fun move(turn: Int) {
         dir = Math.floorMod(dir + 2 * turn - 1, 4)
         loc += dirs[dir]
-        min = Point(min(min.x, loc.x), min(min.y, loc.y))
-        max = Point(max(max.x, loc.x), max(max.y, loc.y))
+        min = Point2(min(min.x, loc.x), min(min.y, loc.y))
+        max = Point2(max(max.x, loc.x), max(max.y, loc.y))
     }
 
     fun colour() = colour(loc)
 
-    fun colour(at: Point) = panel.getOrDefault(at, 0)
+    fun colour(at: Point2) = panel.getOrDefault(at, 0)
 
     fun renderPanel() {
         for (y in min.y..max.y) {
             for (x in min.x..max.x) {
-                print(colours[colour(Point(x, y))])
+                print(colours[colour(Point2(x, y))])
             }
             println()
         }
@@ -64,9 +64,6 @@ class Robot(val computer: IntCodeComputer) {
 
     fun paintedPanels() = panel.size
 }
-
-data class Point(val x: Int, val y:Int)
-operator fun Point.plus(other: Point) = Point(x + other.x, y + other.y)
 
 val computer = IntCodeComputer()
 
