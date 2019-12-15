@@ -1,14 +1,16 @@
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.lang.RuntimeException
 import kotlin.math.pow
 
 
-class IntCodeComputer {
+class IntCodeComputer (val name: String = "Computer"){
 
     companion object {
         private const val MEM_SIZE = 4096
+        private val log = LoggerFactory.getLogger(IntCodeComputer.javaClass)
     }
 
     private var memory = LongArray(MEM_SIZE) { 0 }
@@ -39,6 +41,7 @@ class IntCodeComputer {
         running = true
         while(running) {
             val (opcode, mode) = decodeInstruction(memory[ic])
+            log.info("[$name] Executing opcode $opcode")
             ic = when (opcode) {
                 1 -> add(mode)
                 2 -> multiply(mode)
@@ -121,6 +124,7 @@ class IntCodeComputer {
 
     private suspend fun input(mode: IntArray) : Int {
         val value = input.receive()
+        log.info("[$name] received $value")
         writeParam(1, value, mode)
         return ic + 2
     }
@@ -128,6 +132,7 @@ class IntCodeComputer {
     private suspend fun output(mode: IntArray) : Int {
         val value = readParam(1, mode)
         output.send(value)
+        log.info("[$name] wrote $value")
         return ic + 2
     }
 

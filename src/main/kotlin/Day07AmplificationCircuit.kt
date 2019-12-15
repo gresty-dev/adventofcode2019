@@ -1,3 +1,8 @@
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -13,15 +18,22 @@ val realProgram = File("day07.in").readText()
 
 val program = realProgram
 
-val executor = Executors.newFixedThreadPool(5)
+private val log = LoggerFactory.getLogger(IntCodeComputer.javaClass)
 
-fun main() {
+fun main() = runBlocking {
     feedback()
-    executor.shutdown()
 }
 
-fun basic() {
-    var maxSignal = 0
+suspend fun single() {
+    val amp = createAmp("Computer", 0)
+    amp.writeOutputToStdOut()
+    amp.input.send(3L) // phase
+    amp.input.send(0L) // input signal
+    amp.execute()
+}
+
+suspend fun basic() {
+    var maxSignal = 0L
     var idealPhaseSetting: List<Int>? = null
 
     permute(listOf(0, 1, 2, 3, 4))
@@ -36,8 +48,8 @@ fun basic() {
     println(idealPhaseSetting)
 }
 
-fun feedback() {
-    var maxSignal = 0
+suspend fun feedback() {
+    var maxSignal = 0L
     var idealPhaseSetting: List<Int>? = null
 
     permute(listOf(5, 6, 7, 8, 9))
@@ -66,35 +78,47 @@ fun <T> permute(input: List<T>) : List<List<T>> {
     }
     return perms
 }
-fun execute(phases: IntArray, withFeedback: Boolean = false) : Int {
-    val amps = ArrayList<IntcodeComputer05>(phases.size)
 
-    var prevAmp: IntcodeComputer05? = null
+suspend fun execute(phases: IntArray, withFeedback: Boolean = false) : Long {
+    val amps = ArrayList<IntCodeComputer>(phases.size)
+
+    var prevAmp: IntCodeComputer? = null
+    var seq = 0
     for (phase in phases) {
-        val amp = createAmp(phase, prevAmp)
+        val amp = createAmp(name(phases, seq++), phase, prevAmp)
         amps.add(amp)
         prevAmp = amp
     }
 
+    val lastAmp = prevAmp
+
+    amps[0].input.send(0L)
     if (withFeedback) {
-        val amp0input = listOf(phases[0], 0).iterator()
-        amps[0].setInput { if (amp0input.hasNext()) amp0input.next() else prevAmp?.getOutput()?.take() ?: 0 }
+        GlobalScope.launch { while(true) amps[0].input.send(lastAmp!!.output.receive()) }
     }
 
-    val futures = ArrayList<Future<*>>()
+    val jobs = mutableListOf<Job>()
     for (amp in amps) {
-        futures.add(executor.submit { amp.execute() })
+        jobs.add(GlobalScope.launch { amp.execute() })
     }
 
-    for (future in futures) future.get()
+    log.info("Waiting for amps to complete")
+    for (job in jobs) job.join()
 
-    return prevAmp?.getOutput()?.remove() ?: 0
+    log.info("Retrieving last output from ${amps[0].name}")
+    return amps[0].input.receive() ?: 0L
 }
 
-fun createAmp(phase: Int, prevAmp: IntcodeComputer05? = null) : IntcodeComputer05 {
-    val amp = IntcodeComputer05()
-    val input = listOf(phase).iterator()
+fun name(phases: IntArray, seq: Int) =
+        "Phase" +
+                phases.map { it.toString() }.reduce { acc, s -> acc + s } +
+                "-$seq"
+
+suspend fun createAmp(name: String, phase: Int, prevAmp: IntCodeComputer? = null) : IntCodeComputer {
+    val amp = IntCodeComputer(name)
     amp.load(program)
-    amp.setInput { if (input.hasNext()) input.next() else prevAmp?.getOutput()?.take() ?: 0 }
+    amp.input.send(phase.toLong())
+    if (prevAmp != null)
+        GlobalScope.launch { while (true) amp.input.send(prevAmp.output.receive()) }
     return amp
 }
