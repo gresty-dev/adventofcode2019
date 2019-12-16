@@ -1,9 +1,11 @@
 import java.io.File
+import java.lang.RuntimeException
 import kotlin.math.min
 import kotlin.math.sign
 
 fun main() {
     part1()
+    part2()
 }
 
 fun part1() {
@@ -12,8 +14,28 @@ fun part1() {
 
 fun part2() {
     val maxOre = 1_000_000_000_000
-    var guess = 1_000_000
+    val maxFuel = search(500_000L, 10_000_000L) { q ->
+        val ore = getOreFor("FUEL", q)
 
+        if (ore > maxOre) 1
+        else if (ore == maxOre) 0
+        else {
+            val oreForOneMore = getOreFor("FUEL", q + 1)
+            if (oreForOneMore < maxOre) -1
+            else 0
+        }
+    }
+    println("We can make $maxFuel FUEL from $maxOre ORE")
+}
+
+fun search(low: Long, high: Long, choose: (Long) -> Int) : Long {
+    val mid = (low + high) / 2
+    return when (choose(mid)) {
+        1 -> search(low, mid, choose)
+        -1 -> search(mid, high, choose)
+        0 -> mid
+        else -> throw RuntimeException("Dodgy return value!")
+    }
 }
 
 
