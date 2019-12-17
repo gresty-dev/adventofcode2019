@@ -41,7 +41,7 @@ class IntCodeComputer (val name: String = "Computer"){
         running = true
         while(running) {
             val (opcode, mode) = decodeInstruction(memory[ic])
-            log.info("[$name] Executing opcode $opcode")
+//            log.info("[$name] Executing opcode $opcode")
             ic = when (opcode) {
                 1 -> add(mode)
                 2 -> multiply(mode)
