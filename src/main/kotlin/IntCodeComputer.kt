@@ -22,11 +22,12 @@ class IntCodeComputer (val name: String = "Computer"){
     val output = Channel<Long>(50)
     val input = Channel<Long>(50)
 
-    fun load(program: String) {
+    fun load(program: String) : IntCodeComputer {
         program.split(",")
                 .map { it.toLong() }
                 .toLongArray()
                 .copyInto(memory)
+        return this
     }
 
     fun set(loc: Int, value: Long) {
@@ -171,6 +172,7 @@ class IntCodeComputer (val name: String = "Computer"){
     private fun halt() : Int {
         running = false
         output.close()
+        log.info("Halting.")
         return ic + 1
     }
 
