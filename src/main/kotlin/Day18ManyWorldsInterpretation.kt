@@ -2,6 +2,7 @@ package com.cgresty.advent2019.day18
 
 import com.cgresty.advent2019.*
 import java.io.File
+import java.lang.Integer.MAX_VALUE
 import java.lang.RuntimeException
 import kotlin.math.abs
 
@@ -11,75 +12,73 @@ fun main() {
 
 fun part1() {
 
-    val input = example1.split("\n")
+    val input = example3
     input.forEach(::println)
 
 //    val board = Board(input)
 //    println(board.routes)
+//
+//    val shortest = depthFirstSearch(BoardState(Board(input)))
+//            .minBy { it.getTotalDistance() }
+    val shortest = depthFirstSearch2(BoardState(Board(input)))
 
-        val shortest = depthFirstSearch(BoardState(Board(input)))
-                .minBy { it.getTotalDistance() }
-
-        println("\n\nShortest: ${shortest?.getTotalDistance()} - ${shortest?.route()}")
+    println("\n\nShortest: ${shortest?.getTotalDistance()} - ${shortest?.route()}")
 }
 
-fun depthFirstSearch(state: BoardState) : List<BoardState> {
+fun depthFirstSearch2(state: BoardState) : BoardState? {
     val keys = state.reachableKeys()
     if (keys.isEmpty())
         return if (state.foundAllKeys()) {
-            println("\nFinished: ${state.getTotalDistance()} - ${state.route()}")
-            listOf(state)
+//            println("\nFinished: ${state.getTotalDistance()} - ${state.route()}")
+            state
         } else {
             println("Failed: ${state.route()}")
-            listOf()
+            null
         }
-    val finishedBoards = mutableListOf<BoardState>()
-    keys.forEach { finishedBoards.addAll(depthFirstSearch(BoardState(state).moveToKey(it))) }
-    return finishedBoards
+    var shortestBoard: BoardState? = null
+    keys.forEach {
+        val nextBoard = depthFirstSearch2(state.moveToKey(it))
+        if (boardDistance(nextBoard) < boardDistance(shortestBoard))
+            shortestBoard = nextBoard
+    }
+    return shortestBoard
 }
 
-data class BoardState(val board: Board, var position: Point2, var foundKeys: MutableMap<Char, Int>) {
+fun boardDistance(state: BoardState?) = state?.getTotalDistance() ?: MAX_VALUE
+
+data class BoardState(val board: Board, var atKey: Char, var foundKeys: MutableMap<Char, Int>) {
 
     var reachableKeys: Map<Char, Int>
 
     init {
-        reachableKeys = calculateReachableKeys()
+        val rk2 = calculateReachableKeys2()
+        reachableKeys = rk2
     }
 
-    constructor(board: Board) : this(board, board.start, mutableMapOf())
-    constructor(state: BoardState) : this(state.board, state.position, state.foundKeys.toMutableMap())
+    constructor(board: Board) : this(board, '@', mutableMapOf())
 
     fun reachableKeys() = reachableKeys.keys
 
     fun moveToKey(key: Char) : BoardState {
-        foundKeys[key] = reachableKeys[key]!!
-        position = board.keys[key]!!
-        reachableKeys = calculateReachableKeys()
-        return this
+        val newFoundKeys = foundKeys.toMutableMap()
+        newFoundKeys[key] = reachableKeys[key]!!
+        return BoardState(board, key, newFoundKeys)
     }
 
-    fun foundAllKeys() = foundKeys.size == board.keys.size
+    fun foundAllKeys() = foundKeys.size == board.keys.size - 1 // Ignore '@'
 
     fun getTotalDistance() = foundKeys.values.sum()
 
     fun route() = foundKeys.keys.joinToString()
 
 
-    private fun calculateReachableKeys() : Map<Char, Int> {
-        val keyDistances: MutableMap<Char, Int> = mutableMapOf()
-        bfs(mutableListOf(position), mutableMapOf(position to 0)) { pnew, dist ->
-            when (val c = board.charAt(pnew)) {
-                '.', '@' -> true
-                in 'a'..'z' -> {
-                    if (!found(c)) keyDistances[c] = dist + 1
-                    found(c)
-                }
-                in 'A'..'Z' -> open(c)
-                else -> false
-            }
-        }
-        return keyDistances
-    }
+    private fun calculateReachableKeys2() = board.routes[atKey]!!
+            .map { entry -> entry.key to entry.value }
+            .filter { (key, _) -> key != '@' && !found(key) }
+            .filter { (_, route) -> route.doors.all { open(it) } }
+            .filter { (_, route) -> route.keys.all { found(it) } }
+            .map { (key, route) -> key to route.dist }
+            .toMap()
 
     private fun found(key: Char) = foundKeys.contains(key)
     private fun open(door: Char) = foundKeys.contains(door.toLowerCase())
@@ -90,9 +89,9 @@ data class Board(private val area: List<String>) {
     private val width = area[0].length
     private val height = area.size
     val keys: Map<Char, Point2>
-    private val doors: Map<Char, Point2>
+    val doors: Map<Char, Point2>
     val start: Point2
-    val routes: Map<Pair<Char, Char>, Route>
+    val routes: Map<Char, Map<Char, Route>>
 
     init {
         val keyColl = mutableMapOf<Char, Point2>()
@@ -112,12 +111,13 @@ data class Board(private val area: List<String>) {
         routes = calculateRoutes()
     }
 
-    private fun calculateRoutes() : Map<Pair<Char, Char>, Route> {
-        val routes = mutableMapOf<Pair<Char, Char>, Route>()
+    private fun calculateRoutes() : Map<Char, Map<Char, Route>> {
+        val routes = mutableMapOf<Char, MutableMap<Char, Route>>()
         for (start in keys.keys) {
+            routes[start] = mutableMapOf()
             for (end in keys.keys) {
                 if (start != end)
-                    routes[start to end] = Route(start, end, shortestPath(start, end) { charAt(it) != '#' }, this)
+                    routes[start]!![end] = Route(start, end, shortestPath(start, end) { charAt(it) != '#' }, this)
             }
         }
         return routes
@@ -157,7 +157,6 @@ data class Board(private val area: List<String>) {
 
     private fun charAt(x: Int, y: Int) = area.elementAtOrElse(y) {""}.elementAtOrElse(x) {'#'}
     fun charAt(loc: Point2) = charAt(loc.x, loc.y)
-
 }
 
 data class Node(val loc: Point2, val parent: Node? = null, var g: Int = 0, var h: Int = 0) {
@@ -166,21 +165,27 @@ data class Node(val loc: Point2, val parent: Node? = null, var g: Int = 0, var h
 
 class Route(val from: Char, val to: Char, node: Node, board: Board) {
     val doors: List<Char>
+    val keys: List<Char>
     val dist: Int
 
     init {
         var d = 0;
-        var dd = mutableListOf<Char>()
+        val dd = mutableListOf<Char>()
+        val kk = mutableListOf<Char>()
         var n: Node? = node;
         while (n != null) {
             d++
             val c = board.charAt(n.loc)
             if (c in 'A'..'Z') dd.add(c)
+            if (c in 'a'..'z' && c != from && c != to) kk.add(c)
             n = n.parent
         }
+        keys = kk
         doors = dd
         dist = d - 1
     }
+
+    override fun toString() = "Route: from=$from, to=$to, doors=$doors, keys=$keys, dist=$dist"
 }
 
 val dirsToTry = listOf(Point2(1, 0), Point2(0, 1), Point2(-1, 0), Point2(0, -1))
@@ -207,7 +212,7 @@ val example1 = """
     #########
     #b.A.@.a#
     #########
-""".trimIndent()
+""".trimIndent().split("\n")
 
 val example2 = """
     ########################
@@ -215,7 +220,7 @@ val example2 = """
     ######################.#
     #d.....................#
     ########################
-""".trimIndent()
+""".trimIndent().split("\n")
 
 val example3 = """
     ########################
@@ -223,7 +228,7 @@ val example3 = """
     #.######################
     #.....@.a.B.c.d.A.e.F.g#
     ########################
-""".trimIndent()
+""".trimIndent().split("\n")
 
 val example4 = """
     #################
@@ -235,7 +240,7 @@ val example4 = """
     ########.########
     #l.F..d...h..C.m#
     #################
-""".trimIndent()
+""".trimIndent().split("\n")
 
 val example5 = """
     ########################
@@ -244,4 +249,4 @@ val example5 = """
     ###A#B#C################
     ###g#h#i################
     ########################
-""".trimIndent()
+""".trimIndent().split("\n")
