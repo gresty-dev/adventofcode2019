@@ -1,6 +1,10 @@
+package com.cgresty.advent2019.day15
+
+import com.cgresty.advent2019.*
+import com.cgresty.advent2019.day15.TileType.*
+import com.cgresty.advent2019.day15.Direction.*
+
 import java.io.File
-import TileType.*
-import Direction.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

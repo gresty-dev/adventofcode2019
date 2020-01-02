@@ -1,3 +1,5 @@
+package com.cgresty.advent2019.day4
+
 import kotlin.math.pow
 
 val min = 128392

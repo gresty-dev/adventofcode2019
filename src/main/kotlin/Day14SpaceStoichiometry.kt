@@ -1,3 +1,5 @@
+package com.cgresty.advent2019.day14
+
 import java.io.File
 import java.lang.RuntimeException
 import kotlin.math.min

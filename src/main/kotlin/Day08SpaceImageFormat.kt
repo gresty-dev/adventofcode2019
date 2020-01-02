@@ -1,3 +1,5 @@
+package com.cgresty.advent2019.day8
+
 import java.io.File
 
 const val WIDTH = 25

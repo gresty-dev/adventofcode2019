@@ -1,3 +1,8 @@
+package com.cgresty.advent2019.day11
+
+import com.cgresty.advent2019.IntCodeComputer
+import com.cgresty.advent2019.Point2
+import com.cgresty.advent2019.plus
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

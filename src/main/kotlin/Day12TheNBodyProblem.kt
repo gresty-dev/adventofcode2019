@@ -1,3 +1,6 @@
+package com.cgresty.advent2019.day12
+
+import com.cgresty.advent2019.*
 import java.io.File
 import java.util.stream.Collectors
 import kotlin.math.sign

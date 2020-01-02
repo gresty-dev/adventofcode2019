@@ -1,8 +1,8 @@
+package com.cgresty.advent2019.day9
+
+import com.cgresty.advent2019.IntCodeComputer
 import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.lang.RuntimeException
-import java.util.concurrent.LinkedBlockingQueue
-import kotlin.math.pow
 
 val test1 = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"
 val test2 = "1102,34915192,34915192,7,4,7,99,0"

@@ -1,3 +1,5 @@
+package com.cgresty.advent2019
+
 import kotlin.math.absoluteValue
 
 data class Point2(val x: Int, val y: Int)

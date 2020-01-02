@@ -1,3 +1,8 @@
+package com.cgresty.advent2019.day17
+
+import com.cgresty.advent2019.IntCodeComputer
+import com.cgresty.advent2019.Point2
+import com.cgresty.advent2019.plus
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

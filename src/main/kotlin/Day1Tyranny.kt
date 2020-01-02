@@ -1,5 +1,6 @@
+package com.cgresty.advent2019.day1
+
 import java.io.File
-import java.net.URL
 import kotlin.math.floor
 
 fun main() {

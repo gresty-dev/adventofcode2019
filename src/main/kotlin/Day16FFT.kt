@@ -1,6 +1,7 @@
+package com.cgresty.advent2019.day16
+
 import java.io.File
 import kotlin.math.absoluteValue
-import kotlin.math.sign
 
 fun main() {
 //    val input = "12345678".map { it.toString().toInt() }.toIntArray()

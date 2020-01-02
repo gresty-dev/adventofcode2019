@@ -1,3 +1,5 @@
+package com.cgresty.advent2019.day2
+
 import java.io.File
 import kotlin.text.Charsets.UTF_8
 

@@ -1,3 +1,5 @@
+package com.cgresty.advent2019.day6
+
 import java.io.File
 import java.lang.RuntimeException
 

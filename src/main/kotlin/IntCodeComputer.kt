@@ -1,3 +1,5 @@
+package com.cgresty.advent2019
+
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch

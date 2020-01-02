@@ -1,3 +1,6 @@
+package com.cgresty.advent2019.day5
+
+import com.cgresty.advent2019.IntCodeComputer
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
