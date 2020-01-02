@@ -1,10 +1,7 @@
-import checkers.units.quals.C
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.receiveOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.lang.RuntimeException
 import kotlin.math.max
 
 fun main() = runBlocking {
