@@ -21,7 +21,8 @@ fun part1() {
     val shortest = depthFirstSearch2(BoardState(board))
     val searchTime = System.currentTimeMillis() - start - boardTime
 
-    println("\n\nShortest (board: $boardTime, search: $searchTime) : ${shortest?.getTotalDistance()} - ${shortest?.route()}")
+    println("\n\nShortest (board: $boardTime, search: $searchTime) : ${shortest?.getTotalDistance()} " +
+            "- ${shortest?.route()}")
 }
 
 // Map of a board state to the best known finished state from there
@@ -41,7 +42,7 @@ fun depthFirstSearch2(state: BoardState) : BoardState? {
 
     val cached = cache[state.cacheIndex()]
     if (cached != null) {
-        println("Cache hit! ${state.cacheIndex()}")
+//        println("Cache hit! ${state.cacheIndex()}")
         return state.finishWith(cached)
     }
 
@@ -123,24 +124,26 @@ data class Board(private val area: List<String>) {
     private val height = area.size
     val keys: Map<Char, Point2>
     private val doors: Map<Char, Point2>
-    private val start: Point2
+    private val start: List<Point2>
     val routes: Map<Char, Map<Char, Route>>
 
     init {
         val keyColl = mutableMapOf<Char, Point2>()
         val doorColl = mutableMapOf<Char, Point2>()
-        var pos: Point2? = null
+        val startColl = mutableListOf<Point2>()
         for (x in 0.until(width))
             for (y in 0.until(height))
                 when (val c = charAt(x, y)) {
                     in 'a'..'z' -> keyColl += c to Point2(x, y)
                     in 'A'..'Z' -> doorColl += c to Point2(x, y)
-                    '@' -> pos = Point2(x, y)
+                    '@' -> {
+                        keyColl += ('0' + startColl.size) to Point2(x, y)
+                        startColl.add(Point2(x, y))
+                    }
                 }
-        keyColl['@'] = pos!!
         keys = keyColl
         doors = doorColl
-        start = pos
+        start = startColl
         routes = calculateRoutes()
     }
 
