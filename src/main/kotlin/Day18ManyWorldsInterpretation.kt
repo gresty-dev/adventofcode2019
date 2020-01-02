@@ -12,7 +12,7 @@ fun main() {
 
 fun part1() {
 
-    val input = example3
+    val input = realBoard
     input.forEach(::println)
 
 //    val board = Board(input)
@@ -25,11 +25,12 @@ fun part1() {
     println("\n\nShortest: ${shortest?.getTotalDistance()} - ${shortest?.route()}")
 }
 
+var shortestDistance = MAX_VALUE
 fun depthFirstSearch2(state: BoardState) : BoardState? {
     val keys = state.reachableKeys()
     if (keys.isEmpty())
         return if (state.foundAllKeys()) {
-//            println("\nFinished: ${state.getTotalDistance()} - ${state.route()}")
+            println("\nFinished: ${state.getTotalDistance()} - ${state.route()}")
             state
         } else {
             println("Failed: ${state.route()}")
@@ -37,9 +38,14 @@ fun depthFirstSearch2(state: BoardState) : BoardState? {
         }
     var shortestBoard: BoardState? = null
     keys.forEach {
-        val nextBoard = depthFirstSearch2(state.moveToKey(it))
-        if (boardDistance(nextBoard) < boardDistance(shortestBoard))
-            shortestBoard = nextBoard
+        val nextState = state.moveToKey(it, shortestDistance)
+        if (nextState != null) {
+            val nextFinishedState = depthFirstSearch2(nextState)
+            if (nextFinishedState != null) {
+                shortestBoard = nextFinishedState
+                shortestDistance = shortestBoard!!.getTotalDistance()
+            }
+        }
     }
     return shortestBoard
 }
@@ -59,10 +65,11 @@ data class BoardState(val board: Board, var atKey: Char, var foundKeys: MutableM
 
     fun reachableKeys() = reachableKeys.keys
 
-    fun moveToKey(key: Char) : BoardState {
+    fun moveToKey(key: Char, maxDistance: Int): BoardState? {
         val newFoundKeys = foundKeys.toMutableMap()
         newFoundKeys[key] = reachableKeys[key]!!
-        return BoardState(board, key, newFoundKeys)
+        return if (newFoundKeys.values.sum() < maxDistance) BoardState(board, key, newFoundKeys)
+        else null
     }
 
     fun foundAllKeys() = foundKeys.size == board.keys.size - 1 // Ignore '@'
