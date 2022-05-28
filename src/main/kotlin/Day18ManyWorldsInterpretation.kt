@@ -7,7 +7,7 @@ import java.lang.RuntimeException
 import kotlin.math.abs
 
 fun main() {
-    part1()
+    part2()
 }
 
 fun part1() {
@@ -17,6 +17,7 @@ fun part1() {
 
     val start = System.currentTimeMillis()
     val board = Board(input)
+    println(board.routes)
     val boardTime = System.currentTimeMillis() - start
     val shortest = depthFirstSearch2(BoardState(board))
     val searchTime = System.currentTimeMillis() - start - boardTime
@@ -25,13 +26,49 @@ fun part1() {
             "- ${shortest?.route()}")
 }
 
+fun part2() {
+    val input = replace(example8)
+    input.forEach(::println)
+
+    val start = System.currentTimeMillis()
+    val board = Board(input)
+    println(board.routes)
+    val boardTime = System.currentTimeMillis() - start
+    val shortest = depthFirstSearch2(BoardState(board))
+    val searchTime = System.currentTimeMillis() - start - boardTime
+
+    println("\n\nShortest (board: $boardTime, search: $searchTime) : ${shortest?.getTotalDistance()} " +
+            "- ${shortest?.route()}")
+
+}
+
+fun replace(original: List<String>) : List<String> {
+    val updated = original.toMutableList()
+    for (y in 0.until(original.size - 2)) {
+        var x = -1
+        do {
+            x = original[y].indexOf(toReplace[0], x + 1)
+            if (x >= 0
+                    && toReplace[1] == original[y + 1].substring(x, x + 3)
+                    && toReplace[2] == original[y + 2].substring(x, x + 3)) {
+                updated[y] = original[y].replaceRange(x, x + 3, replacement[0])
+                updated[y + 1] = original[y + 1].replaceRange(x, x + 3, replacement[1])
+                updated[y + 2] = original[y + 2].replaceRange(x, x + 3, replacement[2])
+                return updated
+            }
+        } while (x >= 0)
+    }
+    return original
+}
+
+
 // Map of a board state to the best known finished state from there
 val cache = mutableMapOf<String, BoardState>()
 fun depthFirstSearch2(state: BoardState) : BoardState? {
 
 
     val keys = state.reachableKeys()
-    if (keys.isEmpty())
+    if (keys.all { (robot, keys) -> keys.isEmpty() } )
         return if (state.foundAllKeys()) {
             println("\nFinished: ${state.getTotalDistance()} - ${state.route()}")
             state
@@ -47,11 +84,13 @@ fun depthFirstSearch2(state: BoardState) : BoardState? {
     }
 
     var shortestBoard: BoardState? = null
-    keys.forEach {
-        val nextState = state.moveToKey(it)
-        val nextFinishedState = depthFirstSearch2(nextState)
-        if (boardDistance(nextFinishedState) < boardDistance(shortestBoard)) {
-            shortestBoard = nextFinishedState
+    keys.forEach {(robot, keys) ->
+        keys.forEach { key ->
+            val nextState = state.moveToKey(robot, key)
+            val nextFinishedState = depthFirstSearch2(nextState)
+            if (boardDistance(nextFinishedState) < boardDistance(shortestBoard)) {
+                shortestBoard = nextFinishedState
+            }
         }
     }
     if (shortestBoard != null)
@@ -62,26 +101,29 @@ fun depthFirstSearch2(state: BoardState) : BoardState? {
 
 fun boardDistance(state: BoardState?) = state?.getTotalDistance() ?: MAX_VALUE
 
-data class BoardState(val board: Board, var atKey: Char, var foundKeys: MutableMap<Char, Int>) {
+data class BoardState(val board: Board, var atKey: List<Char>, var foundKeys: MutableMap<Char, Int>) {
 
-    private var reachableKeys: Map<Char, Int>
+    // robot -> (key -> distance))
+    private var reachableKeys: Map<Int, Map<Char, Int>>
 
     init {
-        reachableKeys = calculateReachableKeys2()
+        reachableKeys = calculateReachableKeys()
     }
 
-    constructor(board: Board) : this(board, '@', mutableMapOf())
+    constructor(board: Board) : this(board, 0.until(board.start.size).map {'0' + it}.toMutableList(), mutableMapOf())
 
-    fun reachableKeys() = reachableKeys.keys
+    fun reachableKeys() = reachableKeys.map { (robot, keyDist) -> robot to keyDist.keys }
 
-    fun moveToKey(key: Char): BoardState {
+    fun moveToKey(robot: Int, key: Char): BoardState {
         val newFoundKeys = foundKeys.toMutableMap()
-        newFoundKeys[key] = reachableKeys[key] ?: error("No such reachable key '$key'")
-        return BoardState(board, key, newFoundKeys)
+        newFoundKeys[key] = reachableKeys[robot]!![key] ?: error("No such reachable key '$key' for robot $robot")
+        val newAtKeys = atKey.toMutableList()
+        newAtKeys[robot] = key
+        return BoardState(board, newAtKeys, newFoundKeys)
     }
 
     fun cacheIndex() : String {
-        val index = mutableListOf(atKey)
+        val index = atKey.toMutableList()
         board.keys.keys.filter { !found(it) }
                 .filter { it != '@' }
                 .sorted()
@@ -93,20 +135,24 @@ data class BoardState(val board: Board, var atKey: Char, var foundKeys: MutableM
         other.foundKeys
                 .filter { !foundKeys.containsKey(it.key) }
                 .let { foundKeys.putAll(it) }
-        atKey = other.atKey
+        atKey = other.atKey.toList()
         reachableKeys = mapOf()
         return this
     }
 
-    fun foundAllKeys() = foundKeys.size == board.keys.size - 1 // Ignore '@'
+    fun foundAllKeys() = foundKeys.size == board.keys.size
 
     fun getTotalDistance() = foundKeys.values.sum()
 
     fun route() = foundKeys.keys.joinToString()
 
+    private fun calculateReachableKeys() =
+            atKey.withIndex()
+                .map { (robot, _) -> robot to calculateReachableKeys2(robot) }
+                .toMap()
 
-    private fun calculateReachableKeys2() =
-            (board.routes[atKey] ?: error("No such key '$atKey'"))
+    private fun calculateReachableKeys2(robot: Int) =
+            (board.routes[atKey[robot]] ?: error("No such key '${atKey[robot]}' for robot $robot"))
                     .map { entry -> entry.key to entry.value }
                     .filter { (key, _) -> key != '@' && !found(key) }
                     .filter { (_, route) -> route.doors.all { open(it) } }
@@ -124,7 +170,7 @@ data class Board(private val area: List<String>) {
     private val height = area.size
     val keys: Map<Char, Point2>
     private val doors: Map<Char, Point2>
-    private val start: List<Point2>
+    val start: List<Point2>
     val routes: Map<Char, Map<Char, Route>>
 
     init {
@@ -136,10 +182,7 @@ data class Board(private val area: List<String>) {
                 when (val c = charAt(x, y)) {
                     in 'a'..'z' -> keyColl += c to Point2(x, y)
                     in 'A'..'Z' -> doorColl += c to Point2(x, y)
-                    '@' -> {
-                        keyColl += ('0' + startColl.size) to Point2(x, y)
-                        startColl.add(Point2(x, y))
-                    }
+                    '@' -> startColl.add(Point2(x, y))
                 }
         keys = keyColl
         doors = doorColl
@@ -149,21 +192,28 @@ data class Board(private val area: List<String>) {
 
     private fun calculateRoutes() : Map<Char, Map<Char, Route>> {
         val routes = mutableMapOf<Char, MutableMap<Char, Route>>()
-        for (start in keys.keys) {
+        val starts = keys.keys.toMutableList()
+        for (i in 0.until(start.size)) starts.add('0' + i)
+
+        for (start in starts) {
             routes[start] = mutableMapOf()
             for (end in keys.keys) {
-                if (start != end)
-                    routes[start]!![end] = Route(start, end, shortestPath(start, end) { charAt(it) != '#' }, this)
+                if (start != end) {
+                    val path = shortestPath(start, end) { charAt(it) != '#' }
+                    if (path != null) {
+                        routes[start]!![end] = Route(start, end, path, this)
+                    }
+                }
             }
         }
         return routes
     }
 
-    private fun shortestPath(from: Char, to: Char, isValid: (Point2) -> Boolean) : Node {
+    private fun shortestPath(from: Char, to: Char, isValid: (Point2) -> Boolean) : Node? {
         val open = mutableListOf<Node>()
         val closed = mutableListOf<Node>()
 
-        open.add(Node(keys[from] ?: error("No such key '$from'")))
+        open.add(Node(keys[from] ?: start[from - '0'] ?: error("No such key '$from'")))
 
         while (open.isNotEmpty()) {
             val q = open.minBy { it.f } !!
@@ -183,7 +233,7 @@ data class Board(private val area: List<String>) {
 
             closed.add(q)
         }
-        throw RuntimeException("No route from $from to $to")
+        return null // No available route
     }
 
     private fun manhattan(originTo: Point2) = abs(originTo.x) + abs(originTo.y)
@@ -244,6 +294,18 @@ private fun bfs(q: MutableList<Point2>,
 
 private val realBoard = File("day18.in").readLines()
 
+val toReplace = """
+    ...
+    .@.
+    ...
+""".trimIndent().split("\n")
+
+val replacement = """
+    @#@
+    ###
+    @#@
+""".trimIndent().split("\n")
+
 val example1 = """
     #########
     #b.A.@.a#
@@ -285,4 +347,36 @@ val example5 = """
     ###A#B#C################
     ###g#h#i################
     ########################
+""".trimIndent().split("\n")
+
+val example6 = """
+    #######
+    #a.#Cd#
+    ##...##
+    ##.@.##
+    ##...##
+    #cB#Ab#
+    #######
+""".trimIndent().split("\n")
+
+val example7 = """
+    ###############
+    #d.ABC.#.....a#
+    ######...######
+    ######.@.######
+    ######...######
+    #b.....#.....c#
+    ###############
+""".trimIndent().split("\n")
+
+val example8 = """
+    #############
+    #g#f.D#..h#l#
+    #F###e#E###.#
+    #dCba...BcIJ#
+    #####.@.#####
+    #nK.L...G...#
+    #M###N#H###.#
+    #o#m..#i#jk.#
+    #############
 """.trimIndent().split("\n")
